@@ -1,0 +1,55 @@
+<?php
+session_start();
+include_once('config.php');
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name = mysqli_real_escape_string($conn, $_POST['name']);
+    $dob = mysqli_real_escape_string($conn, $_POST['dob']);
+    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $password = mysqli_real_escape_string($conn, base64_encode($_POST['password']));
+
+    if (isset($_FILES['image'])) {
+        $file_name = $_FILES['image']['name'];
+        $file_type = $_FILES['image']['type'];
+        $temp_name = $_FILES['image']['tmp_name'];
+
+        $img_explode = explode('.', $file_name);
+        $img_extension = strtolower(end($img_explode));
+
+        $extensions = ['png', 'jpeg', 'jpg'];
+
+        if (in_array($img_extension, $extensions)) {
+            $time = time();
+            $new_file_name = $time . '_' . $file_name;
+            $destination = ".\images" . $new_file_name;
+
+            if (move_uploaded_file($temp_name, $destination)) {
+                $status = "Active now";
+                $random_id = rand(time(), 10000000);
+               $sql = mysqli_query($conn, "INSERT INTO users_table (user_id, name, email, dob, password, image, status) VALUES ($random_id, '$name', '$email', '$dob', '$password', '$new_file_name', '$status')");
+
+
+                if (mysqli_query($conn, $sql)) {
+                    $sql2 = "SELECT * FROM users_table WHERE email='$email'";
+                    $result = mysqli_query($conn, $sql2);
+
+                    if ($row = mysqli_fetch_assoc($result)) {
+                        $_SESSION['user_id'] = $row['user_id'];
+                        echo "success";
+                    }
+                } else {
+                    echo "Something went wrong while signing up!";
+                }
+            } else {
+                echo "Failed to upload the image.";
+            }
+        } else {
+            echo "Please select an image file with extensions: jpeg, png, jpg.";
+        }
+    } else {
+        echo "Image file not found.";
+    }
+} else {
+    echo "Invalid request.";
+}
+?>
